@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IP Redirect Generator</title>
+<style>
+  * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+  body {
+    background: #0f172a;
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: #e2e8f0;
+  }
+  .card {
+    background: #1e293b;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+  }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 1.6rem;
+    color: #f1f5f9;
+  }
+  p.sub {
+    margin: 0 0 24px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+  }
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    font-weight: 500;
+  }
+  input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 2px solid #334155;
+    background: #0f172a;
+    color: #f1f5f9;
+    font-size: 1rem;
+    font-family: monospace;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: #3b82f6; }
+  button {
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #2563eb; }
+  button:active { background: #1d4ed8; }
+  .preview {
+    margin-top: 24px;
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 16px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+    white-space: pre-wrap;
+    color: #7dd3fc;
+    border: 1px solid #334155;
+    line-height: 1.5;
+  }
+  .preview .val { color: #fbbf24; }
+  .status {
+    margin-top: 14px;
+    font-size: 0.9rem;
+    min-height: 22px;
+    color: #4ade80;
+  }
+  .status.err { color: #f87171; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>⚡ IP Redirect Generator</h1>
+  <p class="sub">Enter an IP or host — get a <code>link.html</code> redirect file.</p>
+
+  <label for="ip">IP address / host</label>
+  <input id="ip" type="text" value="192.168.1.1" spellcheck="false" autocomplete="off" placeholder="e.g. 192.168.1.1">
+
+  <button id="gen">Generate & Download link.html</button>
+
+  <div class="preview" id="preview"></div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+  const ipInput = document.getElementById('ip');
+  const genBtn  = document.getElementById('gen');
+  const preview = document.getElementById('preview');
+  const status  = document.getElementById('status');
+
+  // Sanitize: allow letters, digits, dots, hyphens, colons (IPv6)
+  function cleanHost(s) {
+    return s.trim().replace(/[^a-zA-Z0-9.:\-]/g, '');
+  }
+
+  // Build the script tag text (with real < and >, not escaped)
+  function buildScript(host) {
+    return "<script>document.location.href = 'http://" + host + "/'+window.location.href.split('#')[1];<\/script>";
+  }
+
+  function updatePreview() {
+    const host = cleanHost(ipInput.value) || '127.0.0.1';
+    // Show preview with the host highlighted
+    preview.innerHTML =
+      "&lt;script&gt;document.location.href = 'http://" +
+      '<span class="val">' + host.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>' +
+      "/'+window.location.href.split('#')[1];&lt;/script&gt;";
+  }
+
+  function generate() {
+    const host = cleanHost(ipInput.value);
+    if (!host) {
+      status.textContent = '⚠️ Please enter a valid IP or host.';
+      status.className = 'status err';
+      return;
+    }
+    ipInput.value = host; // reflect cleaned value
+    updatePreview();
+
+    const fileContent = buildScript(host);
+
+    // Create the file as a Blob and trigger download
+    const blob = new Blob([fileContent], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = 'link.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    status.textContent = '✅ Saved as link.html using: ' + host;
+    status.className = 'status';
+  }
+
+  ipInput.addEventListener('input', () => {
+    updatePreview();
+    status.textContent = '';
+    status.className = 'status';
+  });
+
+  ipInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') generate();
+  });
+
+  genBtn.addEventListener('click', generate);
+
+  updatePreview();
+</script>
+</body>
+</html>
